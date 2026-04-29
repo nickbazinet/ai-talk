@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vibe Coding vs AI-Assisted Development</title>
+<style>
+  :root {
+    --bg: #FAFAF7;
+    --bg-soft: #F5EFEA;
+    --ink: #1A1F2C;
+    --ink-soft: #5A6072;
+    --rule: #E8E5E0;
+    --accent: #E85D3D;
+    --accent-soft: #FCE7DF;
+    --code-bg: #1A1F2C;
+    --code-ink: #F5EFEA;
+    --good: #2F8F5C;
+    --bad: #B33A3A;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  .deck {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .slide {
+    position: absolute;
+    inset: 0;
+    padding: 5vh 8vw;
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .slide.active {
+    display: flex;
+    opacity: 1;
+  }
+
+  /* ============== TYPOGRAPHY ============== */
+  h1 {
+    font-size: clamp(2.5rem, 5.5vw, 5.5rem);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.02;
+    color: var(--ink);
+  }
+  h2 {
+    font-size: clamp(2rem, 3.6vw, 3.4rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    margin-bottom: 0.5em;
+    color: var(--ink);
+  }
+  h3 {
+    font-size: clamp(1.1rem, 1.4vw, 1.5rem);
+    font-weight: 600;
+    color: var(--ink);
+    letter-spacing: -0.01em;
+  }
+  p, li {
+    font-size: clamp(1rem, 1.4vw, 1.45rem);
+    line-height: 1.55;
+    color: var(--ink-soft);
+  }
+  p.lead {
+    font-size: clamp(1.15rem, 1.65vw, 1.7rem);
+    color: var(--ink);
+    line-height: 1.45;
+  }
+  .eyebrow {
+    font-size: clamp(0.75rem, 0.95vw, 1rem);
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 1.2em;
+    display: inline-block;
+  }
+  .accent { color: var(--accent); }
+  strong.ink { color: var(--ink); font-weight: 600; }
+  .mono { font-family: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace; }
+
+  /* ============== LAYOUTS ============== */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4vw;
+    align-items: center;
+  }
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.8vw;
+    margin-top: 2em;
+  }
+  .grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.8vw;
+    margin-top: 2em;
+  }
+  .grid-4 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.4vw;
+    margin-top: 2em;
+  }
+  .stack > * + * { margin-top: 1em; }
+
+  /* ============== CARDS ============== */
+  .card {
+    background: white;
+    border: 1px solid var(--rule);
+    border-radius: 14px;
+    padding: 1.6em 1.6em;
+  }
+  .card-accent {
+    background: white;
+    border: 1px solid var(--rule);
+    border-left: 4px solid var(--accent);
+    border-radius: 10px;
+    padding: 1.4em 1.6em;
+  }
+  .card h3 { margin-bottom: 0.5em; }
+
+  /* Pillar cards (4 pillars of Claude Code) */
+  .pillar {
+    background: white;
+    border: 1px solid var(--rule);
+    border-radius: 14px;
+    padding: 1.4em 1.2em;
+    text-align: left;
+    transition: transform 0.2s ease;
+  }
+  .pillar .num {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--accent);
+    margin-bottom: 0.6em;
+    display: block;
+    letter-spacing: 0.1em;
+  }
+  .pillar h3 { font-size: 1.4rem; margin-bottom: 0.4em; }
+  .pillar p { font-size: 0.95rem; }
+
+  /* Big stat */
+  .stat {
+    font-size: clamp(4rem, 11vw, 12rem);
+    font-weight: 700;
+    line-height: 0.9;
+    letter-spacing: -0.04em;
+    color: var(--accent);
+    font-feature-settings: "tnum";
+  }
+  .stat-label {
+    font-size: clamp(0.95rem, 1.2vw, 1.3rem);
+    color: var(--ink-soft);
+    margin-top: 0.6em;
+    max-width: 30ch;
+  }
+
+  /* Comparison columns (vibe vs assisted) */
+  .vs {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 2vw;
+    align-items: stretch;
+    margin-top: 1.5em;
+  }
+  .vs-col {
+    background: white;
+    border: 1px solid var(--rule);
+    border-radius: 14px;
+    padding: 1.6em;
+  }
+  .vs-col.vibe { border-top: 4px solid #C9A88A; }
+  .vs-col.harness { border-top: 4px solid var(--accent); }
+  .vs-col h3 {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.85rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-bottom: 0.5em;
+  }
+  .vs-col h2 { font-size: clamp(1.4rem, 1.9vw, 1.9rem); margin-bottom: 0.7em; }
+  .vs-col ul { list-style: none; padding: 0; }
+  .vs-col li {
+    padding: 0.4em 0;
+    font-size: clamp(0.95rem, 1.15vw, 1.15rem);
+    border-bottom: 1px dashed var(--rule);
+  }
+  .vs-col li:last-child { border-bottom: none; }
+  .vs-divider {
+    align-self: center;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 1.2rem;
+    color: var(--ink-soft);
+    font-weight: 600;
+  }
+
+  /* Code block */
+  .code {
+    background: var(--code-bg);
+    color: var(--code-ink);
+    border-radius: 10px;
+    padding: 1.2em 1.4em;
+    font-family: "JetBrains Mono", "SF Mono", Menlo, monospace;
+    font-size: clamp(0.85rem, 1.05vw, 1.1rem);
+    line-height: 1.55;
+    overflow-x: auto;
+  }
+  .code .c-comment { color: #8B95A8; font-style: italic; }
+  .code .c-keyword { color: #FFA07A; }
+  .code .c-string { color: #C8E6A8; }
+  .code .c-tag { color: #E85D3D; }
+
+  /* Bullets */
+  ul.clean { list-style: none; padding: 0; }
+  ul.clean li {
+    padding: 0.45em 0 0.45em 1.4em;
+    position: relative;
+    color: var(--ink);
+  }
+  ul.clean li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0.95em;
+    width: 0.5em;
+    height: 0.5em;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  /* Tools chip row */
+  .chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.7em;
+    margin-top: 1.2em;
+  }
+  .chip {
+    padding: 0.5em 1em;
+    border: 1px solid var(--rule);
+    border-radius: 999px;
+    font-family: "JetBrains Mono", monospace;
+    font-size: clamp(0.85rem, 1vw, 1rem);
+    color: var(--ink-soft);
+    background: white;
+  }
+  .chip.active {
+    background: var(--ink);
+    color: var(--bg);
+    border-color: var(--ink);
+  }
+
+  /* Title slide */
+  .title-slide {
+    background: var(--bg);
+  }
+  .title-slide .meta {
+    font-family: "JetBrains Mono", monospace;
+    font-size: clamp(0.8rem, 1vw, 1.05rem);
+    color: var(--ink-soft);
+    margin-bottom: 2em;
+    letter-spacing: 0.1em;
+  }
+  .title-slide h1 {
+    font-size: clamp(2.8rem, 6.8vw, 7.2rem);
+    line-height: 0.98;
+  }
+  .title-slide .sub {
+    margin-top: 1.2em;
+    font-size: clamp(1.1rem, 1.7vw, 1.8rem);
+    color: var(--ink-soft);
+    max-width: 38ch;
+  }
+  .title-slide .footer-meta {
+    margin-top: 4em;
+    display: flex;
+    gap: 2em;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .title-slide .footer-meta .dot {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--accent);
+  }
+
+  /* Section divider slide */
+  .divider-slide {
+    background: var(--ink);
+    color: var(--bg);
+  }
+  .divider-slide .eyebrow { color: var(--accent); }
+  .divider-slide h1 { color: var(--bg); font-size: clamp(2.5rem, 5vw, 5rem); }
+  .divider-slide p { color: rgba(245, 239, 234, 0.7); }
+
+  /* Closing slide */
+  .closing-slide {
+    background: var(--bg);
+    text-align: left;
+  }
+  .takeaway {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 1em 1.4em;
+    align-items: baseline;
+    margin-top: 1.6em;
+  }
+  .takeaway .num {
+    font-family: "JetBrains Mono", monospace;
+    font-size: clamp(1.4rem, 2vw, 2rem);
+    color: var(--accent);
+    font-weight: 700;
+  }
+  .takeaway .txt {
+    font-size: clamp(1.1rem, 1.55vw, 1.6rem);
+    color: var(--ink);
+    font-weight: 500;
+    line-height: 1.35;
+  }
+
+  /* Diagrams */
+  .feedback-loop {
+    display: flex;
+    gap: 1em;
+    align-items: center;
+    margin-top: 2em;
+    flex-wrap: nowrap;
+  }
+  .loop-step {
+    flex: 1;
+    background: white;
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    padding: 1em 0.9em;
+    text-align: center;
+  }
+  .loop-step .label {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.75rem;
+    color: var(--ink-soft);
+    letter-spacing: 0.1em;
+  }
+  .loop-step .name {
+    font-size: clamp(0.9rem, 1.15vw, 1.15rem);
+    font-weight: 600;
+    margin-top: 0.3em;
+    color: var(--ink);
+  }
+  .loop-step.fast { border-color: var(--accent); }
+  .loop-arrow {
+    color: var(--ink-soft);
+    font-size: 1.4rem;
+    flex: 0 0 auto;
+  }
+
+  /* ============== NAV ============== */
+  .nav {
+    position: fixed;
+    bottom: 1.6vh;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 1.2em;
+    padding: 0.5em 1.2em;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--rule);
+    border-radius: 999px;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.78rem;
+    color: var(--ink-soft);
+    z-index: 100;
+    user-select: none;
+  }
+  .nav button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--ink-soft);
+    font-size: 1.1rem;
+    padding: 0.2em 0.5em;
+    border-radius: 6px;
+    transition: background 0.15s;
+  }
+  .nav button:hover { background: var(--bg-soft); color: var(--ink); }
+  .progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 3px;
+    background: var(--accent);
+    transition: width 0.25s ease;
+    z-index: 99;
+  }
+  .slide-num {
+    position: fixed;
+    bottom: 2vh;
+    right: 2vw;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.8rem;
+    color: var(--ink-soft);
+    z-index: 50;
+  }
+
+  /* Helper flex */
+  .row { display: flex; gap: 0.8em; align-items: center; flex-wrap: wrap; }
+
+  /* Speakers / footnote */
+  .footnote {
+    font-size: clamp(0.85rem, 1vw, 1.05rem);
+    color: var(--ink-soft);
+    font-style: italic;
+    margin-top: 1.4em;
+    padding-left: 1em;
+    border-left: 3px solid var(--accent);
+  }
+
+  /* Prevent overflow scroll on small */
+  @media (max-height: 600px) {
+    .slide { padding: 3vh 5vw; }
+  }
+</style>
+</head>
+<body>
+
+<div class="progress" id="progress"></div>
+<div class="slide-num" id="slideNum">01 / 21</div>
+
+<div class="deck" id="deck">
+
+  <!-- ========== 01 TITLE ========== -->
+  <section class="slide title-slide active">
+    <div class="meta">A TALK FOR ENGINEERS &amp; THE CURIOUS &nbsp;&middot;&nbsp; 25 MIN</div>
+    <h1>Vibe Coding<br><span style="color: var(--ink-soft);">vs.</span> <span class="accent">AI-Assisted<br>Development.</span></h1>
+    <p class="sub">Why the magic isn't in <em>asking</em> the AI &mdash;<br>it's in the harness you build around it.</p>
+    <div class="footer-meta">
+      <span class="dot"></span>
+      <span class="mono" style="font-size: 0.95rem; color: var(--ink-soft);">Nick Bazinet &nbsp;&middot;&nbsp; Sovra / F-35</span>
+    </div>
+  </section>
+
+  <!-- ========== 02 HOOK ========== -->
+  <section class="slide">
+    <span class="eyebrow">Where We're Starting</span>
+    <h2 style="max-width: 18ch;">It feels like everyone&nbsp;codes now.</h2>
+    <p class="lead" style="max-width: 30ch; margin-top: 0.4em;">
+      They don't.
+    </p>
+    <p style="max-width: 50ch; margin-top: 1.4em;">
+      There's a huge gap between <strong class="ink">asking AI to build something</strong>
+      and <strong class="ink">guiding it the right way</strong>. The first feels magical for ten minutes.
+      The second is what actually scales.
+    </p>
+  </section>
+
+  <!-- ========== 03 THE COMPARISON ========== -->
+  <section class="slide">
+    <span class="eyebrow">The Distinction That Matters</span>
+    <h2>Two ways to work with AI.</h2>
+    <div class="vs">
+      <div class="vs-col vibe">
+        <h3>Approach A</h3>
+        <h2>Vibe coding</h2>
+        <ul>
+          <li>"Hey AI, build me a thing."</li>
+          <li>One-shot prompts, no rules</li>
+          <li>Output reflects whatever the model picks</li>
+          <li>Looks great in a demo</li>
+          <li>Falls apart at team scale</li>
+        </ul>
+      </div>
+      <div class="vs-divider">VS</div>
+      <div class="vs-col harness">
+        <h3>Approach B</h3>
+        <h2>AI-assisted development</h2>
+        <ul>
+          <li>Build the <strong class="ink">harness</strong> around the AI</li>
+          <li>Hooks, rules, skills, agents</li>
+          <li>Output reflects <strong class="ink">your</strong> patterns</li>
+          <li>Feels boring. Looks great in a PR.</li>
+          <li>Scales across a team</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 04 THE REAL VALUE ========== -->
+  <section class="slide">
+    <div class="two-col">
+      <div>
+        <span class="eyebrow">Why bother</span>
+        <h2 style="max-width: 14ch;">No human writes code this fast.</h2>
+        <p style="margin-top: 1.2em; max-width: 40ch;">
+          You can be skeptical of AI. You can be allergic to AI. The speed gap is still real &mdash;
+          and the speed is where the value lives, <em>once you can trust the output</em>.
+        </p>
+      </div>
+      <div style="text-align: center;">
+        <div class="stat">10×</div>
+        <div class="stat-label">faster than typing &mdash; if the harness is right.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 05 GUIDING ≠ TELLING ========== -->
+  <section class="slide">
+    <span class="eyebrow">The Key Idea</span>
+    <h2 style="max-width: 22ch;">Guiding the AI isn't telling it what to write.</h2>
+    <p class="lead" style="max-width: 40ch; margin-top: 0.6em;">
+      It's building the environment so the AI follows your patterns
+      <strong class="ink">without you having to say it every time.</strong>
+    </p>
+    <div class="footnote" style="max-width: 48ch;">
+      Treat the AI like a top-of-field engineer. They know how to code.
+      They <em>don't</em> know your standards, your guidelines, your domain. That's your job.
+    </div>
+  </section>
+
+  <!-- ========== 06 TOOLS LANDSCAPE ========== -->
+  <section class="slide">
+    <span class="eyebrow">A note on tools</span>
+    <h2>Pick your weapon.</h2>
+    <p style="max-width: 50ch;">
+      The pattern works with any of these. The mechanics differ, the principles don't.
+      For this talk, we're using <strong class="ink">Claude Code</strong>.
+    </p>
+    <div class="chip-row">
+      <span class="chip">Cursor</span>
+      <span class="chip active">Claude Code</span>
+      <span class="chip">OpenCode</span>
+      <span class="chip">Windsurf</span>
+      <span class="chip">Aider</span>
+      <span class="chip">&hellip; etc</span>
+    </div>
+    <p style="margin-top: 2em; max-width: 50ch;">
+      Claude Code gives us four primitives to work with:
+      <span class="mono" style="color: var(--ink);">hooks</span>,
+      <span class="mono" style="color: var(--ink);">rules</span>,
+      <span class="mono" style="color: var(--ink);">skills</span>, and
+      <span class="mono" style="color: var(--ink);">agents</span>.
+    </p>
+  </section>
+
+  <!-- ========== 07 FOUR PILLARS ========== -->
+  <section class="slide">
+    <span class="eyebrow">The four primitives</span>
+    <h2>Your harness, in four parts.</h2>
+    <div class="grid-4">
+      <div class="pillar">
+        <span class="num">01 / HOOKS</span>
+        <h3>Always run.</h3>
+        <p>Scripts that fire before or after a Claude action. Linters, SAST, fast checks. Their job: <strong class="ink">shrink the feedback loop.</strong></p>
+      </div>
+      <div class="pillar">
+        <span class="num">02 / RULES</span>
+        <h3>Path-triggered.</h3>
+        <p>Instructions Claude reads when it touches certain files. The AI doesn't choose &mdash; the path does. Your business knowledge lives here.</p>
+      </div>
+      <div class="pillar">
+        <span class="num">03 / SKILLS</span>
+        <h3>Workflows it picks.</h3>
+        <p>Reusable workflows or knowledge Claude calls when relevant. Heavy on context. Best when short and reused, not invented.</p>
+      </div>
+      <div class="pillar">
+        <span class="num">04 / AGENTS</span>
+        <h3>Specialized helpers.</h3>
+        <p>Sub-agents for narrower jobs (review, research, planning). Not the focus today, but they round out the picture.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 08 HOOKS - WHAT ========== -->
+  <section class="slide">
+    <span class="eyebrow">01 &mdash; Hooks</span>
+    <h2>Hooks are non-negotiable checks.</h2>
+    <div class="two-col" style="margin-top: 1em;">
+      <div>
+        <ul class="clean">
+          <li>Run <strong class="ink">before or after</strong> a Claude action</li>
+          <li>Should be <strong class="ink">fast</strong> &mdash; you'll feel the latency</li>
+          <li>Output (logs, errors) is fed back to the AI</li>
+          <li>Best for things that <em>must</em> happen: linters, SAST, format checks</li>
+        </ul>
+      </div>
+      <div>
+        <div class="card-accent">
+          <h3>Real example</h3>
+          <p style="margin-top: 0.5em;">
+            Run the right linter based on file extension. Claude finds out about
+            an error <em>now</em> &mdash; not after it pushes and waits ten minutes for GitLab CI.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 09 HOOKS - FEEDBACK LOOP ========== -->
+  <section class="slide">
+    <span class="eyebrow">Why hooks matter</span>
+    <h2>The goal is always the same: shorten the feedback loop.</h2>
+    <div class="feedback-loop">
+      <div class="loop-step"><div class="label">WRITE</div><div class="name">AI generates</div></div>
+      <div class="loop-arrow">&rarr;</div>
+      <div class="loop-step fast"><div class="label">HOOK</div><div class="name">Lint &amp; check</div></div>
+      <div class="loop-arrow">&rarr;</div>
+      <div class="loop-step fast"><div class="label">FIX</div><div class="name">AI sees error</div></div>
+      <div class="loop-arrow">&rarr;</div>
+      <div class="loop-step"><div class="label">SHIP</div><div class="name">PR is clean</div></div>
+    </div>
+    <p style="margin-top: 2em; max-width: 50ch;">
+      Every minute the AI is <em>wrong without knowing it</em> is a minute it's heading further in the wrong direction.
+    </p>
+  </section>
+
+  <!-- ========== 10 RULES - WHAT ========== -->
+  <section class="slide">
+    <span class="eyebrow">02 &mdash; Rules</span>
+    <h2>Rules are where the magic starts.</h2>
+    <div class="two-col" style="margin-top: 1em;">
+      <div>
+        <p>
+          A rule is just an instruction tied to a <strong class="ink">file path</strong>.
+          Touch a file in <span class="mono" style="color: var(--ink);">/payments/</span>?
+          The payments rule fires. Always.
+        </p>
+        <p style="margin-top: 0.8em;">
+          Unlike skills, the AI doesn't get a vote. Whether it actually <em>follows</em> the rule&hellip;
+          that's the part you tune.
+        </p>
+      </div>
+      <div class="code">
+<span class="c-comment"># .claude/rules/payments.md</span>
+<span class="c-tag">applies-to:</span> <span class="c-string">"src/payments/**"</span>
+
+<span class="c-keyword">When working in this directory:</span>
+- Never log full card numbers
+- All amounts are integer cents
+- Use <span class="c-string">PaymentResult&lt;T&gt;</span> for return types
+- Tax calc lives in <span class="c-string">tax/engine.ts</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 11 RULES - THE SECRET ========== -->
+  <section class="slide">
+    <span class="eyebrow">The secret of good rules</span>
+    <h2 style="max-width: 22ch;">Don't teach the AI to code. Teach it your business.</h2>
+    <div class="grid-2" style="margin-top: 1.4em;">
+      <div class="card">
+        <h3 style="color: var(--bad);">Don't bother</h3>
+        <ul class="clean" style="margin-top: 0.5em;">
+          <li>"Write clean code"</li>
+          <li>"Follow SOLID principles"</li>
+          <li>"Use meaningful names"</li>
+        </ul>
+        <p style="margin-top: 0.8em; font-size: 0.95rem;">It already knows. You're just burning tokens.</p>
+      </div>
+      <div class="card">
+        <h3 style="color: var(--good);">Worth every token</h3>
+        <ul class="clean" style="margin-top: 0.5em;">
+          <li>"Tenants are isolated by <span class="mono">org_id</span>; never query without it"</li>
+          <li>"All money is integer cents"</li>
+          <li>"<span class="mono">FeatureFlag</span> reads go through <span class="mono">flagsClient</span>, never env vars"</li>
+        </ul>
+      </div>
+    </div>
+    <p class="footnote" style="max-width: 56ch;">
+      How do we measure if a rule is working? Honestly &mdash; we don't yet.
+      It's developer feedback and the count of comments left on merge requests. That's a real open problem.
+    </p>
+  </section>
+
+  <!-- ========== 12 SKILLS - WHAT ========== -->
+  <section class="slide">
+    <span class="eyebrow">03 &mdash; Skills</span>
+    <h2>Skills are workflows the AI picks up.</h2>
+    <p class="lead" style="max-width: 44ch;">
+      Where rules are triggered <em>by you</em> (via paths), skills are picked <em>by the AI</em>
+      when the model decides one is relevant.
+    </p>
+    <div class="grid-3" style="margin-top: 1.6em;">
+      <div class="card">
+        <h3>Repeatable workflow</h3>
+        <p style="margin-top: 0.4em;">"How we add a new API endpoint" &mdash; steps, conventions, tests.</p>
+      </div>
+      <div class="card">
+        <h3>Just-in-time knowledge</h3>
+        <p style="margin-top: 0.4em;">Domain context the AI only needs in specific situations.</p>
+      </div>
+      <div class="card">
+        <h3>Planning helpers</h3>
+        <p style="margin-top: 0.4em;">"Before you implement, plan first" &mdash; with what to consider.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 13 SKILLS - TIPS ========== -->
+  <section class="slide">
+    <span class="eyebrow">Hard-won lessons</span>
+    <h2>Two things to know about skills.</h2>
+    <div class="grid-2" style="margin-top: 1em;">
+      <div class="card-accent">
+        <h3>1 &nbsp; Don't trust AI-written skills (yet)</h3>
+        <p style="margin-top: 0.6em;">
+          Auto-generated skills are <strong class="ink">way too verbose</strong>. They pack in
+          information the AI doesn't need and confuse the one trying to use it.
+        </p>
+        <p style="margin-top: 0.6em;">
+          Use AI to draft, then ruthlessly cut. <strong class="ink">Straight to the point</strong> wins.
+        </p>
+      </div>
+      <div class="card-accent">
+        <h3>2 &nbsp; Reuse before you reinvent</h3>
+        <p style="margin-top: 0.6em;">
+          People have spent <em>hours</em> tuning skill libraries.
+          Frameworks like <span class="mono" style="color: var(--ink);">bmad</span> and
+          <span class="mono" style="color: var(--ink);">superpowers</span> are excellent and easy to plug in.
+        </p>
+        <p style="margin-top: 0.6em;">
+          Start from someone else's work. Customize from there.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 14 CLAUDE.MD ========== -->
+  <section class="slide">
+    <span class="eyebrow">Project context</span>
+    <h2><span class="mono">CLAUDE.md</span> &mdash; less is more.</h2>
+    <div class="two-col" style="margin-top: 1em;">
+      <div>
+        <ul class="clean">
+          <li>Cap it at <strong class="ink">~200 lines.</strong></li>
+          <li>Project-specific context only</li>
+          <li>Explain the high-level architecture</li>
+          <li><em>Don't</em> explain how to write code</li>
+          <li><em>Don't</em> explain coding conventions &mdash; the AI will pick those up from your codebase</li>
+        </ul>
+        <p class="footnote" style="max-width: 38ch; margin-top: 1.4em;">
+          My first <span class="mono">CLAUDE.md</span> was a brick.
+          Most of it was wasted tokens on things the AI already knew.
+        </p>
+      </div>
+      <div class="code">
+<span class="c-comment"># CLAUDE.md (the good kind)</span>
+
+<span class="c-tag">## Architecture</span>
+- Frontend: Next.js + tRPC
+- API: NestJS, deployed via GitLab CI
+- DB: Postgres, multi-tenant via <span class="c-string">org_id</span>
+
+<span class="c-tag">## Domain quirks</span>
+- Pricing engine lives in <span class="c-string">/pricing</span>
+- Auth runs through <span class="c-string">@platform/auth</span>
+- Audit log is <span class="c-keyword">append-only</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 15 CODE REVIEW - PROBLEM ========== -->
+  <section class="slide">
+    <span class="eyebrow">Code review</span>
+    <h2 style="max-width: 22ch;">When you ship 10+ MRs a day, review breaks.</h2>
+    <p class="lead" style="max-width: 48ch; margin-top: 0.6em;">
+      One or two code-owners cannot eyeball that volume manually.
+      Tools like CodeRabbit and GitLab Duo help, but&hellip;
+    </p>
+    <p class="footnote" style="max-width: 56ch;">
+      In a perfect world, the review tool would know every business rule and catch every logic bug.
+      We are not in that world. So we adapt.
+    </p>
+  </section>
+
+  <!-- ========== 16 CODE REVIEW - WORKING APPROACH ========== -->
+  <section class="slide">
+    <span class="eyebrow">What's working for us</span>
+    <h2>Layered review, with custom rules.</h2>
+    <div class="grid-3" style="margin-top: 1.4em;">
+      <div class="card">
+        <h3><span class="mono accent">01.</span> &nbsp; Local "core review"</h3>
+        <p style="margin-top: 0.5em;">Frameworks like bmad / superpowers run a structured review locally before the PR opens.</p>
+      </div>
+      <div class="card">
+        <h3><span class="mono accent">02.</span> &nbsp; Tool pass</h3>
+        <p style="margin-top: 0.5em;">CodeRabbit / GitLab Duo for the second pass. Custom rules, not stock config.</p>
+      </div>
+      <div class="card">
+        <h3><span class="mono accent">03.</span> &nbsp; The golden rule</h3>
+        <p style="margin-top: 0.5em;">If you write a comment by hand, <strong class="ink">also</strong> update the tool. Never repeat yourself.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 17 CONTINUOUS IMPROVEMENT ========== -->
+  <section class="slide divider-slide">
+    <span class="eyebrow">The shift</span>
+    <h1 style="max-width: 22ch;">The job isn't writing code anymore.</h1>
+    <p class="lead" style="max-width: 50ch; color: rgba(245, 239, 234, 0.85); margin-top: 1em;">
+      It's writing the harness that lets the AI write the code &mdash; well, in your style, at your standard.
+    </p>
+    <p style="margin-top: 1.5em; max-width: 50ch;">
+      That takes discipline. It's also where we've seen the biggest jump in quality.
+    </p>
+  </section>
+
+  <!-- ========== 18 TECH DEBT ========== -->
+  <section class="slide">
+    <span class="eyebrow">Hidden corollary</span>
+    <h2 style="max-width: 22ch;">AI inherits your tech debt &mdash; and amplifies it.</h2>
+    <div class="two-col" style="margin-top: 1em;">
+      <div>
+        <p>
+          The AI learns your patterns from your codebase. If your code is all over the place,
+          its output will be all over the place &mdash; just <em>faster.</em>
+        </p>
+        <p style="margin-top: 1em;">
+          Counter-intuitively, AI makes refactoring <strong class="ink">more</strong> important, not less.
+        </p>
+      </div>
+      <div>
+        <div class="card-accent">
+          <h3>The good news</h3>
+          <p style="margin-top: 0.5em;">
+            You're shipping features faster. Use the slack to pay down debt.
+            That investment compounds &mdash; every future AI-generated line gets better.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 19 80/20 ========== -->
+  <section class="slide">
+    <div class="two-col">
+      <div>
+        <span class="eyebrow">Last principle</span>
+        <h2 style="max-width: 14ch;">Chase the 80%. Ignore the last&nbsp;20%.</h2>
+        <p style="margin-top: 1.2em; max-width: 40ch;">
+          AI doesn't <em>know</em> &mdash; it picks the most statistically relevant answer.
+          It will never be perfect.
+        </p>
+        <p style="margin-top: 1em; max-width: 40ch;">
+          Make the AI <strong class="ink">80% better</strong> at what your team needs.
+          That's already a massive win. The last 20% will eat your whole quarter.
+        </p>
+      </div>
+      <div style="text-align: center;">
+        <div class="stat">80<span style="font-size: 0.5em;">%</span></div>
+        <div class="stat-label">improvement is already a&nbsp;huge improvement.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 20 TAKEAWAYS ========== -->
+  <section class="slide closing-slide">
+    <span class="eyebrow">If you remember five things</span>
+    <h2>Take this back to your team.</h2>
+    <div class="takeaway">
+      <span class="num">01</span><span class="txt">Vibe coding gets demos. Harness building ships product.</span>
+      <span class="num">02</span><span class="txt">Hooks shorten the feedback loop. Make them fast.</span>
+      <span class="num">03</span><span class="txt">Rules teach business, not coding. Treat AI like a senior who's new.</span>
+      <span class="num">04</span><span class="txt">Reuse skills. Keep <span class="mono">CLAUDE.md</span> short.</span>
+      <span class="num">05</span><span class="txt">Pay down tech debt &mdash; the AI is reading every line of it.</span>
+    </div>
+  </section>
+
+  <!-- ========== 21 THANK YOU / Q&A ========== -->
+  <section class="slide title-slide">
+    <span class="eyebrow">Thank you.</span>
+    <h1 style="font-size: clamp(3rem, 9vw, 9rem);">Questions?</h1>
+    <p class="sub" style="margin-top: 1.4em;">
+      What's the messiest part of <em>your</em> harness right now?<br>
+      That's usually where the next 80% lives.
+    </p>
+    <div class="footer-meta">
+      <span class="dot"></span>
+      <span class="mono" style="font-size: 0.95rem; color: var(--ink-soft);">Nick Bazinet &nbsp;&middot;&nbsp; nicolas.bazinet@sovra.com</span>
+    </div>
+  </section>
+
+</div>
+
+<div class="nav">
+  <button id="prev" aria-label="Previous slide">&larr;</button>
+  <span id="navLabel">01 / 21</span>
+  <button id="next" aria-label="Next slide">&rarr;</button>
+</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const total = slides.length;
+  let current = 0;
+
+  const progress = document.getElementById('progress');
+  const slideNum = document.getElementById('slideNum');
+  const navLabel = document.getElementById('navLabel');
+
+  function pad(n) { return String(n).padStart(2, '0'); }
+
+  function show(i) {
+    if (i < 0) i = 0;
+    if (i >= total) i = total - 1;
+    slides.forEach((s, idx) => s.classList.toggle('active', idx === i));
+    current = i;
+    progress.style.width = ((i + 1) / total * 100) + '%';
+    const label = pad(i + 1) + ' / ' + pad(total);
+    slideNum.textContent = label;
+    navLabel.textContent = label;
+    history.replaceState(null, '', '#' + (i + 1));
+  }
+
+  document.getElementById('prev').addEventListener('click', () => show(current - 1));
+  document.getElementById('next').addEventListener('click', () => show(current + 1));
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') { show(current + 1); e.preventDefault(); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { show(current - 1); e.preventDefault(); }
+    else if (e.key === 'Home') { show(0); }
+    else if (e.key === 'End') { show(total - 1); }
+    else if (e.key === 'f' || e.key === 'F') {
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+      else document.exitFullscreen();
+    }
+  });
+
+  // Touch swipe support
+  let touchStartX = 0;
+  document.addEventListener('touchstart', (e) => { touchStartX = e.changedTouches[0].screenX; });
+  document.addEventListener('touchend', (e) => {
+    const dx = e.changedTouches[0].screenX - touchStartX;
+    if (Math.abs(dx) > 60) show(current + (dx < 0 ? 1 : -1));
+  });
+
+  // Init from hash
+  const initial = parseInt(location.hash.replace('#', '')) - 1;
+  show(isNaN(initial) ? 0 : initial);
+</script>
+
+</body>
+</html>
